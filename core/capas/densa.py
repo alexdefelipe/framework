@@ -8,6 +8,6 @@ class Densa():
         self.funcion_activacion = getattr(funciones_activacion, funcion_activacion)
 
     def __propagar__(self, x, W, b):
-        self.z = np.dot(x, W)  # + b
+        self.z = np.dot(x, W) + b
         self.a = self.funcion_activacion["funcion"](self.z)
         return self.a

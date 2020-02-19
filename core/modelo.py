@@ -11,7 +11,7 @@ class Modelo:
         self.W = []
         self.b = []
         self.deltas = []
-        self.lr = 0.1
+        self.lr = 0.001
         self.coste = []
 
     def add(self, capa):
@@ -34,26 +34,25 @@ class Modelo:
         for epo in range(epochs):
             last_activations = []
             for x, y in zip(inputs, targets):
-                activaciones = x
                 # Feedforward
-                for i, capa in enumerate(self.capas):
+                for i, capa in enumerate(self.capas[1:]):
                     if i == 0:
-                        activaciones = capa.__propagar__(activaciones)
+                        activaciones = capa.__propagar__(x,  self.W[i], self.b[i])
                     else:
-                        activaciones = capa.__propagar__(activaciones, self.W[i - 1], self.b[i - 1])
+                        activaciones = capa.__propagar__(activaciones, self.W[i], self.b[i])
                 # Backpropagation
                 # Calcular deltas
-                for i, capa in enumerate(reversed(self.capas[1:])):
-                    if i == 0:
-                        delta = self.funcion_coste["derivada"](y,
-                                                               capa.a)  # * capa.funcion_activacion["derivada"](capa.a)
-                        self.deltas.append(delta)
-                    else:
-                        delta = np.dot(self.W[-i], self.deltas[i - 1]) * capa.funcion_activacion["derivada"](capa.a)
-                        self.deltas.append(delta)
+
+                delta = self.funcion_coste["derivada"](y, capa.a) * capa.funcion_activacion["derivada"](capa.z)
+                self.deltas.insert(0, delta)
+                for i in reversed(range(1, len(self.capas) - 1)):
+                    capa = self.capas[i]
+                    delta = self.W[i] @ self.deltas[0] * capa.funcion_activacion["derivada"](capa.z).T
+                    self.deltas.insert(0, delta)
                 # Gradient descent
-                for i in range(1, len(self.capas)):
-                    self.W[-i] = self.W[-i] - self.lr * np.dot(self.deltas[i - 1], self.capas[-i].a.T)
+                for i in reversed(range(len(self.W))):
+                    self.W[i] = self.W[i] - self.lr * np.sum(self.deltas[i] @ self.capas[i+1].a)
+                    self.b[i] = self.b[i] - self.lr * np.sum(self.deltas[i])
                 self.deltas = []
                 last_activations.append(self.capas[-1].a)
             last_activations = [act[0] for act in last_activations]
@@ -66,10 +65,12 @@ class Modelo:
         for x in inputs:
             activaciones = x
             # Feedforward
-            for i, capa in enumerate(self.capas):
+            for i, capa in enumerate(self.capas[1:]):
                 if i == 0:
-                    activaciones = capa.__propagar__(activaciones)
+                    activaciones = capa.__propagar__(x, self.W[i], self.b[i])
                 else:
-                    activaciones = capa.__propagar__(activaciones, self.W[i - 1], self.b[i - 1])
-            predictions.append(int(np.round(self.capas[-1].a[0])))
+                    activaciones = capa.__propagar__(activaciones, self.W[i], self.b[i])
+            a = self.capas[-1].a[0]
+            if not np.isnan(a).any():
+                predictions.append(int(np.round(a)))
         return predictions
