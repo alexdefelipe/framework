@@ -22,14 +22,14 @@ class Modelo:
         y_values = np.linspace(y_lims[0], y_lims[1], res)
 
         grid = np.zeros((res, res))
-        val = 0
-        for idx, x in enumerate(x_values):
-            for idy, y in enumerate(y_values):
-                grid[idx, idy] = self.predict([x, y], return_scores=True)[1][0]
-                #grid[idx, idy] = val
-                val += 1
+        inputs = []
+        for x in x_values:
+            for y in y_values:
+                inputs.append([x,y])
+        preds, scores = self.predict(inputs, return_scores=True)
+        scores = np.reshape(scores, (res, res)).T
 
-        axis.pcolormesh(x_values, y_values, np.array(grid).T, cmap="coolwarm")
+        axis.pcolormesh(x_values, y_values, scores, cmap="coolwarm")
         axis.set_xlim(*x_lims)
         axis.set_ylim(*y_lims)
 

@@ -11,7 +11,7 @@ modelo = Modelo()
 modelo.add(Entrada(2))
 modelo.add(Densa(1))
 
-X, Y = make_blobs(n_samples=300, centers=2, n_features=2, random_state=106)
+X, Y = make_blobs(n_samples=300, centers=2, n_features=2, random_state=101)
 # X, Y = make_circles(n_samples=500, factor=0.1, noise=0.05)
 Y = Y[:, np.newaxis]
 X_train, X_test, y_train, y_test = train_test_split(X, Y, test_size=0.33, random_state=42)
