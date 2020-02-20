@@ -13,6 +13,33 @@ class Modelo:
         self.deltas = []
         self.coste = []
 
+    def diagnose_boundaries(self, x_lims, y_lims, res, axis=None, plot=False):
+        import matplotlib.pyplot as plt
+
+        if axis is None:
+            fig, axis = plt.figure(figsize=(30, 20))
+        x_values = np.linspace(x_lims[0], x_lims[1], res)
+        y_values = np.linspace(y_lims[0], y_lims[1], res)
+
+        grid = np.zeros((res, res))
+        val = 0
+        for idx, x in enumerate(x_values):
+            for idy, y in enumerate(y_values):
+                grid[idx, idy] = self.predict([x, y], return_scores=True)[1][0]
+                #grid[idx, idy] = val
+                val += 1
+
+        axis.pcolormesh(x_values, y_values, np.array(grid).T, cmap="coolwarm")
+        axis.set_xlim(*x_lims)
+        axis.set_ylim(*y_lims)
+
+        if plot:
+            plt.show()
+        else:
+            return axis
+
+
+
     def add(self, capa):
         n_capas = len(self.capas)
 
@@ -61,8 +88,9 @@ class Modelo:
             # print(self.deltas)
             self.coste.append(self.funcion_coste["funcion"](targets, last_activations))
 
-    def predict(self, inputs):
+    def predict(self, inputs, return_scores=False):
         predictions = []
+        scores = []
         for x in inputs:
             activaciones = x
             # Feedforward
@@ -73,5 +101,9 @@ class Modelo:
                     activaciones = capa.__propagar__(activaciones, self.W[i], self.b[i])
             a = self.capas[-1].a[0]
             if not np.isnan(a).any():
+                scores.append(a)
                 predictions.append(int(np.round(a)))
-        return predictions
+        if return_scores:
+            return predictions, scores
+        else:
+            return predictions
