@@ -11,7 +11,6 @@ class Modelo:
         self.W = []
         self.b = []
         self.deltas = []
-        self.lr = 0.001
         self.coste = []
 
     def add(self, capa):
@@ -27,10 +26,12 @@ class Modelo:
             n = capa.n
             self.capas.append(capa)
             # Inicialización He
+            # self.W.append(np.random.rand(n_anterior, n))
+            # self.b.append(np.random.rand(1, n))
             self.W.append(np.random.rand(n_anterior, n) * (np.sqrt(2 / n_anterior)))
             self.b.append(np.random.rand(1, n) * np.sqrt(2 / n_anterior))
 
-    def train(self, inputs, targets, epochs=1):
+    def train(self, inputs, targets, epochs=1, lr = 0.001, batch_size = 100):
         for epo in range(epochs):
             last_activations = []
             for x, y in zip(inputs, targets):
@@ -51,8 +52,8 @@ class Modelo:
                     self.deltas.insert(0, delta)
                 # Gradient descent
                 for i in reversed(range(len(self.W))):
-                    self.W[i] = self.W[i] - self.lr * np.sum(self.deltas[i] @ self.capas[i+1].a)
-                    self.b[i] = self.b[i] - self.lr * np.sum(self.deltas[i])
+                    self.W[i] = self.W[i] - lr * np.sum(self.deltas[i] @ self.capas[i+1].a)
+                    self.b[i] = self.b[i] - lr * np.sum(self.deltas[i])
                 self.deltas = []
                 last_activations.append(self.capas[-1].a)
             last_activations = [act[0] for act in last_activations]
