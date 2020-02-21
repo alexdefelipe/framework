@@ -1,7 +1,7 @@
+import numpy as np
+
 from core.capas import Entrada
 from core.funciones import funciones_coste
-
-import numpy as np
 
 
 class Modelo:
@@ -25,7 +25,7 @@ class Modelo:
         inputs = []
         for x in x_values:
             for y in y_values:
-                inputs.append([x,y])
+                inputs.append([x, y])
         preds, scores = self.predict(inputs, return_scores=True)
         scores = np.reshape(scores, (res, res)).T
 
@@ -37,8 +37,6 @@ class Modelo:
             plt.show()
         else:
             return axis
-
-
 
     def add(self, capa):
         n_capas = len(self.capas)
@@ -53,25 +51,36 @@ class Modelo:
             n = capa.n
             self.capas.append(capa)
             # Inicialización He
-            # self.W.append(np.random.rand(n_anterior, n))
-            # self.b.append(np.random.rand(1, n))
             self.W.append(np.random.rand(n_anterior, n) * (np.sqrt(2 / n_anterior)))
             self.b.append(np.random.rand(1, n) * np.sqrt(2 / n_anterior))
 
-    def train(self, inputs, targets, epochs=1, lr = 0.001, batch_size = 100):
+    def comprobar_entradas(self, inputs, targets):
+        if type(inputs) is not np.ndarray or type(targets) is not np.ndarray:
+            raise Exception("Tanto las entradas como las etiquetas deben de estar contenidas en un array de numpy")
+
+        i = inputs.shape[0]
+        j = targets.shape[0]
+        if i is not j:
+            raise Exception(
+                "La dimensión 0, correspondiente al número de muestras, de los inputsy de las etiquetas debe de coincidir ")
+
+        return True
+
+    def train(self, inputs, targets, epochs=1, lr=0.001, batch_size=100):
+        self.comprobar_entradas(inputs, targets)
         for epo in range(epochs):
             last_activations = []
             for x, y in zip(inputs, targets):
                 # Feedforward
                 for i, capa in enumerate(self.capas[1:]):
                     if i == 0:
-                        activaciones = capa.__propagar__(x,  self.W[i], self.b[i])
+                        activaciones = capa.__propagar__(x, self.W[i], self.b[i])
                     else:
                         activaciones = capa.__propagar__(activaciones, self.W[i], self.b[i])
                 # Backpropagation
                 # Calcular deltas
 
-                delta = self.funcion_coste["derivada"](y, capa.a) * capa.funcion_activacion["derivada"](capa.z)
+                delta = self.funcion_coste["derivada"](y, capa.a, self) * capa.funcion_activacion["derivada"](capa.z)
                 self.deltas.insert(0, delta)
                 for i in reversed(range(1, len(self.capas) - 1)):
                     capa = self.capas[i]
@@ -79,7 +88,7 @@ class Modelo:
                     self.deltas.insert(0, delta)
                 # Gradient descent
                 for i in reversed(range(len(self.W))):
-                    self.W[i] = self.W[i] - lr * np.sum(self.deltas[i] @ self.capas[i+1].a)
+                    self.W[i] = self.W[i] - lr * np.sum(self.deltas[i] @ self.capas[i + 1].a)
                     self.b[i] = self.b[i] - lr * np.sum(self.deltas[i])
                 self.deltas = []
                 last_activations.append(self.capas[-1].a)
