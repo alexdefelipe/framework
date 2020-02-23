@@ -1,4 +1,10 @@
+import os
+import tempfile
+
+import imageio
+import matplotlib.pyplot as plt
 import numpy as np
+from PIL import Image
 
 from core.capas import Entrada
 from core.funciones import funciones_coste
@@ -12,12 +18,12 @@ class Modelo:
         self.b = []
         self.deltas = []
         self.coste = []
+        self.bound_tracking = []
 
-    def diagnose_boundaries(self, x_lims, y_lims, res, axis=None, plot=False):
+    def diagnose_boundaries(self, x_lims, y_lims, res, axis=None, plot=False, data=None):
         import matplotlib.pyplot as plt
 
-        if axis is None:
-            fig, axis = plt.figure(figsize=(30, 20))
+        axis = axis or plt.gca()
         x_values = np.linspace(x_lims[0], x_lims[1], res)
         y_values = np.linspace(y_lims[0], y_lims[1], res)
 
@@ -32,6 +38,9 @@ class Modelo:
         axis.pcolormesh(x_values, y_values, scores, cmap="coolwarm")
         axis.set_xlim(*x_lims)
         axis.set_ylim(*y_lims)
+
+        if data is not None:
+            axis.scatter(data[0][:, 0], data[0][:, 1], c=data[1])
 
         if plot:
             plt.show()
@@ -64,9 +73,18 @@ class Modelo:
             raise Exception(
                 "La dimensión 0, correspondiente al número de muestras, de los inputs y de las etiquetas debe de coincidir ")
 
-    def train(self, inputs, targets, epochs=1, lr=0.001, batch_size=100):
+    def train(self, inputs, targets, epochs=1, lr=0.001, batch_size=100, diagnose=False):
         self.comprobar_entradas(inputs, targets)
         self.coste = np.empty((epochs,))
+
+        if diagnose:
+            fig, ax = plt.subplots(2, 1, figsize=(5, 6), gridspec_kw={'height_ratios': [1, 3]})
+            # ax = fig.add_subplot(111)
+            tmpdir = tempfile.gettempdir()
+            savepath = '/'.join([tmpdir, 'diagnostic_images'])
+            os.makedirs(savepath, exist_ok=True)
+            n = 0
+
         for epo in range(epochs):
             last_activations = np.empty(targets.shape)
             for n_sample, (x, y) in enumerate(zip(inputs, targets)):
@@ -93,6 +111,30 @@ class Modelo:
                 self.deltas = []
                 last_activations[n_sample] = self.capas[-1].a
             self.coste[epo] = self.funcion_coste["funcion"](targets, last_activations)
+            if diagnose:
+                ax[0].plot(self.coste[:epo])
+                ax[0].set_title("Cost over epochs")
+                ax[0].set_xlim(0, epochs)
+                ax[0].set_xlabel("Epochs")
+                ax[0].set_ylabel("Cost")
+                ax[1] = self.diagnose_boundaries([min(inputs[:, 0]), max(inputs[:, 0])],
+                                                 [min(inputs[:, 1]), max(inputs[:, 1])], axis=ax[1], res=50,
+                                                 data=(inputs, targets))
+                ax[1].set_title("Decision map evolution")
+                # fig.suptitle("Training diagnostics")
+                fig.tight_layout()
+                # fig.subplots_adjust(top=0.92)
+                filename = '/'.join([savepath, 'image.jpg'])
+                plt.savefig(filename)
+                self.bound_tracking.append(imageio.imread(filename))
+                # plt.cla()
+                ax[0].cla()
+                ax[1].cla()
+        if diagnose:
+            duration = [max(3 / epochs, 0.05) for i in range(epochs)]
+            duration[-1] = 1
+            imageio.mimsave('/'.join([savepath, 'anim.gif']), self.bound_tracking, duration=duration)
+            im = Image.open('/'.join([savepath, 'anim.gif']))
 
     def predict(self, inputs, return_scores=False):
         predictions = []

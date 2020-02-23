@@ -17,7 +17,7 @@ def nuestro_modelo(X_train, X_test, y_train, y_test):
     modelo.add(Densa(3))
     modelo.add(Densa(1))
 
-    modelo.train(X_train, y_train, epochs=500, lr=0.01)
+    modelo.train(X_train, y_train, epochs=100, lr=0.05, diagnose=True)
     # y_pred, scores = modelo.predict(X_test, True)
 
     # y_pred_bool = np.round(scores).astype(np.int)
@@ -43,7 +43,7 @@ def modelo_keras(X_train, X_test, y_train, y_test):
     modelo.add(Dense(2, activation='sigmoid'))
     modelo.add(Dense(1, activation='sigmoid'))
     modelo.compile(loss='binary_crossentropy', optimizer='SGD')
-    modelo.fit(X_train, y_train, epochs=500, verbose=0)
+    modelo.fit(X_train, y_train, epochs=200, verbose=0)
     y_pred = modelo.predict_proba(X_test)
     y_pred_bool = np.round(y_pred)
 
@@ -53,7 +53,7 @@ def modelo_keras(X_train, X_test, y_train, y_test):
 
 if __name__ == '__main__':
     # X, Y = make_blobs(n_samples=300, centers=2, n_features=2, random_state=105)
-    X, Y = make_circles(n_samples=500, factor=0.1, noise=0.05)
+    X, Y = make_circles(n_samples=1000, factor=0.1, noise=0.05, random_state=106)
     X_trai, X_tes, y_trai, y_tes = train_test_split(X, Y, test_size=0.33, random_state=42)
     # modelo_keras(X_trai, X_tes, y_trai, y_tes)
     nuestro_modelo(X_trai, X_tes, y_trai, y_tes)
