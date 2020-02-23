@@ -60,42 +60,39 @@ class Modelo:
 
         i = inputs.shape[0]
         j = targets.shape[0]
-        if i is not j:
+        if i != j:
             raise Exception(
-                "La dimensión 0, correspondiente al número de muestras, de los inputsy de las etiquetas debe de coincidir ")
-
-        return True
+                "La dimensión 0, correspondiente al número de muestras, de los inputs y de las etiquetas debe de coincidir ")
 
     def train(self, inputs, targets, epochs=1, lr=0.001, batch_size=100):
         self.comprobar_entradas(inputs, targets)
+        self.coste = np.empty((epochs,))
         for epo in range(epochs):
-            last_activations = []
-            for x, y in zip(inputs, targets):
+            last_activations = np.empty(targets.shape)
+            for n_sample, (x, y) in enumerate(zip(inputs, targets)):
                 # Feedforward
-                for i, capa in enumerate(self.capas[1:]):
+                activaciones = np.reshape(x, (1, x.size))
+                for i, capa in enumerate(self.capas):
                     if i == 0:
-                        activaciones = capa.__propagar__(x, self.W[i], self.b[i])
+                        activaciones = capa.__propagar__(activaciones)
                     else:
-                        activaciones = capa.__propagar__(activaciones, self.W[i], self.b[i])
+                        activaciones = capa.__propagar__(activaciones, self.W[i - 1], self.b[i - 1])
                 # Backpropagation
                 # Calcular deltas
 
-                delta = self.funcion_coste["derivada"](y, capa.a, self) * capa.funcion_activacion["derivada"](capa.z)
+                delta = self.funcion_coste["derivada"](y, capa.a) * capa.funcion_activacion["derivada"](capa.z)
                 self.deltas.insert(0, delta)
                 for i in reversed(range(1, len(self.capas) - 1)):
                     capa = self.capas[i]
-                    delta = self.W[i] @ self.deltas[0] * capa.funcion_activacion["derivada"](capa.z).T
+                    delta = self.deltas[0] @ self.W[i].T * capa.funcion_activacion["derivada"](capa.z)
                     self.deltas.insert(0, delta)
                 # Gradient descent
                 for i in reversed(range(len(self.W))):
-                    self.W[i] = self.W[i] - lr * np.sum(self.deltas[i] @ self.capas[i + 1].a)
-                    self.b[i] = self.b[i] - lr * np.sum(self.deltas[i])
+                    self.W[i] = self.W[i] - lr * self.capas[i].a.T @ self.deltas[i]
+                    self.b[i] = self.b[i] - lr * self.deltas[i]
                 self.deltas = []
-                last_activations.append(self.capas[-1].a)
-            last_activations = [act[0] for act in last_activations]
-            # print(last_activations)
-            # print(self.deltas)
-            self.coste.append(self.funcion_coste["funcion"](targets, last_activations))
+                last_activations[n_sample] = self.capas[-1].a
+            self.coste[epo] = self.funcion_coste["funcion"](targets, last_activations)
 
     def predict(self, inputs, return_scores=False):
         predictions = []

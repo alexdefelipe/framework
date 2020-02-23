@@ -12,25 +12,22 @@ np.seterr(divide='raise', invalid='raise')
 #        "derivada": lambda y, a: 1 / (1 if isinstance(y, int) else y.size) * np.sum(tanh["derivada"]())}
 
 def funcion(y, a):
-    # try:
-    cost = -1 / (1 if isinstance(y, int) else y.size) * np.sum(np.nan_to_num(
-        y * np.log(a) + (np.ones(len(y)) - y) * np.log(np.ones(len(a)) - a)))
-    # except(FloatingPointError):
-    # try:
-    #     a = max(min(a, 1-1e-3), 1e-3)
-    #     cost = -y / a + (1 - y) / (1 - a)
-    # except(TypeError):
-    #     a = max(min(a[0], 1 - 1e-3), 1e-3)
-    #     cost = -y / a + (1 - y) / (1 - a)
+    try:
+        cost = -1 / (1 if isinstance(y, int) else y.size) * np.sum(
+            y * np.log(a) + (np.ones(len(y)) - y) * np.log(np.ones(len(a)) - a))
+    except FloatingPointError:
+        a = np.maximum(np.minimum(a, 1 - 1e-3), 1e-3)
+        cost = -1 / (1 if isinstance(y, int) else y.size) * np.sum(
+            y * np.log(a) + (np.ones(len(y)) - y) * np.log(np.ones(len(a)) - a))
     return cost
 
 
-def derivada(y, a, model):
-    # try:
-    cost = np.nan_to_num(-y / a + (1 - y) / (1 - a))
-    # except(FloatingPointError):
-    #     a = max(min(a, 1-1e-3), 1e-3)
-    #     cost = -y / a + (1 - y) / (1 - a)
+def derivada(y, a):
+    try:
+        cost = -y / a + (1 - y) / (1 - a)
+    except FloatingPointError:
+        a = np.maximum(np.minimum(a, 1 - 1e-3), 1e-3)
+        cost = -y / a + (1 - y) / (1 - a)
     return cost
 
 
