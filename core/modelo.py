@@ -12,8 +12,8 @@ from core.optimizers import optimizers
 
 
 class Modelo:
-    def __init__(self, funcion_coste=funciones_coste.cross_entropy, optimizer="SGD"):
-        self.funcion_coste = funcion_coste
+    def __init__(self, cost_function=funciones_coste.cross_entropy, optimizer="SGD"):
+        self.cost_function = cost_function
         self.capas = []
         self.W = []
         self.b = []
@@ -107,7 +107,7 @@ class Modelo:
 
                 self.deltas = []
                 last_activations[n_sample] = self.capas[-1].a
-            self.cost[epo] = self.funcion_coste["funcion"](batch_targets, last_activations)
+            self.cost[epo] = self.cost_function["funcion"](batch_targets, last_activations)
             self.weights.append(copy.deepcopy(self.W))
         if diagnose:
             self.decision_boundary_tracking(inputs, targets)
