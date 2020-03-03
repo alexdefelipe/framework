@@ -14,11 +14,11 @@ np.seterr(divide='raise', invalid='raise')
 def funcion(y, a):
     try:
         cost = -1 / (1 if isinstance(y, int) else y.size) * np.sum(
-            y * np.log(a) + (np.ones(len(y)) - y) * np.log(np.ones(len(a)) - a))
+            y * np.log(a) + (np.ones(y.shape) - y) * np.log(np.ones(a.shape) - a))
     except FloatingPointError:
         a = np.maximum(np.minimum(a, 1 - 1e-3), 1e-3)
         cost = -1 / (1 if isinstance(y, int) else y.size) * np.sum(
-            y * np.log(a) + (np.ones(len(y)) - y) * np.log(np.ones(len(a)) - a))
+            y * np.log(a) + (np.ones(y.shape) - y) * np.log(np.ones(a.shape) - a))
     return cost
 
 
