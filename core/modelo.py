@@ -119,7 +119,7 @@ class Modelo:
 
                 self.deltas = []
                 last_activations[n_sample] = self.capas[-1].a
-            self.cost[epo] = self.cost_function["funcion"](batch_targets, last_activations, self.n_classes)
+            self.cost[epo] = self.cost_function["funcion"](batch_targets, last_activations)
             self.weights.append(copy.deepcopy(self.W))
         if diagnose:
             if self.n_features is not 2 or self.n_classes is not 2:
