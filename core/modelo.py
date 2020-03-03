@@ -40,14 +40,27 @@ class Modelo:
             self.b.append(np.random.rand(1, n) * np.sqrt(2 / n_anterior))
 
     def comprobar_entradas(self, inputs, targets):
+        # Comprobar si son arrays de numpy
         if type(inputs) is not np.ndarray or type(targets) is not np.ndarray:
             raise Exception("Tanto las entradas como las etiquetas deben de estar contenidas en un array de numpy")
 
+        # Comprobar que inputs y targets consideran el mismo número de casos
         i = inputs.shape[0]
         j = targets.shape[0]
         if i != j:
             raise Exception(
-                "La dimensión 0, correspondiente al número de muestras, de los inputs y de las etiquetas debe de coincidir ")
+                "La dimensión 0, correspondiente al número de muestras, de los inputs y de las etiquetas debe de coincidir")
+
+        # Comprobar si es una clasicación multiclase, y en ese caso si los targets están one-hot encoded
+        n_unique_target_values = np.unique(targets).size
+        if n_unique_target_values > 2:
+            try:
+                n_classes = targets.shape[1]
+                if n_classes is not n_unique_target_values:
+                    raise
+            except IndexError:
+                raise Exception(
+                    "Para clasificación multiclase es necesario codificar las etiquetas mediante one-hot enconding")
 
     def generate_random_batch(self, inputs, targets, batch_size):
         batch_idx = np.random.choice(targets.size, batch_size, replace=False)
@@ -57,17 +70,14 @@ class Modelo:
         return batch_inputs, batch_targets
 
     def feed_forward(self, x, capas, W, b):
-        activaciones = np.reshape(x, (1, x.size))
+        activations = np.reshape(x, (1, x.size))
         for i, capa in enumerate(capas):
             if i == 0:
-                activaciones = capa.__propagar__(activaciones)
+                activations = capa.__propagar__(activations)
             else:
-                activaciones = capa.__propagar__(activaciones, W[i - 1], b[i - 1])
+                activations = capa.__propagar__(activations, W[i - 1], b[i - 1])
 
-        prediccion = int(np.round(activaciones))
-        score = activaciones
-
-        return prediccion, score
+        return activations
 
     def train(self, inputs, targets, epochs=1, lr=0.001, batch_size=None, diagnose=False):
         self.comprobar_entradas(inputs, targets)
@@ -81,11 +91,11 @@ class Modelo:
             last_activations = np.empty(batch_targets.shape)
             for n_sample, (x, y) in enumerate(zip(batch_inputs, batch_targets)):
                 # Feedforward
-                self.feed_forward(x, self.capas, self.W, self.b)
+                activations = self.feed_forward(x, self.capas, self.W, self.b)
 
                 # Backpropagation
-                delta = self.funcion_coste["derivada"](y, self.capas[-1].a) * self.capas[-1].funcion_activacion[
-                    "derivada"](self.capas[-1].z)
+                last_activations[n_sample] = activations
+                delta = activations - y
                 self.deltas.insert(0, delta)
                 for i in reversed(range(1, len(self.capas) - 1)):
                     capa = self.capas[i]
@@ -109,8 +119,14 @@ class Modelo:
         if weights is None:
             weights = self.W
 
+        # scores = [self.feed_forward(x, self.capas, weights, self.b).squeeze(axis=1) for x in inputs]
+        # predictions = [int(np.round(activation)) for activation in scores]
         for x in inputs:
-            prediction, score = self.feed_forward(x, self.capas, weights, self.b)
+            last_activations = self.feed_forward(x, self.capas, weights, self.b)
+
+            prediction = int(np.round(last_activations))
+            score = last_activations
+
             predictions.append(prediction)
             if return_scores:
                 scores.append(score)

@@ -10,10 +10,10 @@ def nuestro_modelo(X_train, X_test, y_train, y_test):
     modelo = Modelo()
 
     modelo.add(Entrada(2))
-    modelo.add(Densa(3, "relu"))
+    modelo.add(Densa(3))
     modelo.add(Densa(1))
 
-    modelo.train(X_train, y_train, epochs=100, batch_size=20, lr=0.05, diagnose=True)
+    modelo.train(X_train, y_train, epochs=100, batch_size=100, lr=0.05, diagnose=True)
     # y_pred, scores = modelo.predict(X_test, True)
 
     # y_pred_bool = np.round(scores).astype(np.int)
