@@ -1,6 +1,7 @@
 import numpy as np
 
-np.seterr(divide='raise', invalid='raise')
+# np.seterr(divide='raise', invalid='raise')
+np.seterr(all='raise')
 
 
 # from .funciones_activacion import tanh
@@ -12,14 +13,22 @@ np.seterr(divide='raise', invalid='raise')
 #        "derivada": lambda y, a: 1 / (1 if isinstance(y, int) else y.size) * np.sum(tanh["derivada"]())}
 
 def funcion(y, a):
-    try:
-        cost = -1 / (1 if isinstance(y, int) else y.size) * np.sum(
-            y * np.log(a) + (np.ones(y.shape) - y) * np.log(np.ones(a.shape) - a))
-    except FloatingPointError:
-        a = np.maximum(np.minimum(a, 1 - 1e-3), 1e-3)
-        cost = -1 / (1 if isinstance(y, int) else y.size) * np.sum(
-            y * np.log(a) + (np.ones(y.shape) - y) * np.log(np.ones(a.shape) - a))
-    return cost
+    import warnings
+
+    with warnings.catch_warnings():
+        warnings.filterwarnings('error')
+        try:
+            cost = -1 / (1 if isinstance(y, int) else y.size) * np.sum(
+                y * np.log(a) + (np.ones(y.shape) - y) * np.log(np.ones(a.shape) - a))
+        except FloatingPointError:
+            a = np.maximum(np.minimum(a, 1 - 1e-3), 1e-3)
+            cost = -1 / (1 if isinstance(y, int) else y.size) * np.sum(
+                y * np.log(a) + (np.ones(y.shape) - y) * np.log(np.ones(a.shape) - a))
+        except Warning as e:
+            a = np.maximum(np.minimum(a, 1 - 1e-3), 1e-3)
+            cost = -1 / (1 if isinstance(y, int) else y.size) * np.sum(
+                y * np.log(a) + (np.ones(y.shape) - y) * np.log(np.ones(a.shape) - a))
+        return cost
 
 
 def derivada(y, a):
