@@ -44,6 +44,7 @@ class Modelo:
             self.b.append(np.random.rand(1, n) * np.sqrt(2 / n_anterior))
 
     def comprobar_entradas(self, inputs, targets):
+        targets = self.check_targets_shape(targets)
         # Comprobar si son arrays de numpy
         if type(inputs) is not np.ndarray or type(targets) is not np.ndarray:
             raise Exception("Tanto las entradas como las etiquetas deben de estar contenidas en un array de numpy")
@@ -57,22 +58,44 @@ class Modelo:
                 "La dimensión 0, correspondiente al número de muestras, de los inputs y de las etiquetas debe de coincidir")
         self.n_train_samples = i
 
-        # Comprobar si es una clasicación multiclase, y en ese caso si los targets están one-hot encoded
-        try:
-            self.n_classes = targets.shape[1]
-            if self.n_classes is 2:
+        # Primero compruebo el tamaño del shape. Si solo tiene un elemento, es una clasificación binaria
+        self.n_classes = 2 if targets.shape[1] is 1 else targets.shape[1]
+
+        if self.n_classes is 2:
+            if self.capas[-1].n is 1 and self.capas[
+                -1].funcion_activacion is core.funciones.funciones_activacion.softmax:
+                raise Exception("La capa de salida de una neurona no puede usar softmax como función de activación")
+            if self.capas[-1].n is 2 and self.capas[
+                -1].funcion_activacion is not core.funciones.funciones_activacion.softmax:
+                raise Exception("La capa de salida de dos neuronas debe usar softmax como función de activación")
+        else:
+            if np.unique(targets[:, 1]) > 2:
                 raise Exception(
                     "Para clasificación multiclase es necesario codificar las etiquetas mediante one-hot enconding")
-
             if self.capas[-1].funcion_activacion is not core.funciones.funciones_activacion.softmax:
                 raise Exception(
                     "Para clasificación multiclase es necesario definir la función softmax como la función de activación de la última capa")
-        except IndexError:
-            n_classes = np.unique(targets).size
-            if n_classes is not 2:
-                raise Exception(
-                    "Para clasificación multiclase es necesario codificar las etiquetas mediante one-hot enconding")
-            self.n_classes = 2
+
+        return targets
+        # if len(targets.shape) is 1 and self.capas[-1].funcion_activacion is core.funciones.funciones_activacion.softmax:
+        #     raise Exception(
+        #         "Este framework no permite usar la función de activación softmax para clasificación binaria")
+        # else:
+        #     try:
+        #         self.n_classes = targets.shape[1]
+        #         if self.n_classes is 2:
+        #             raise Exception(
+        #                 "Para clasificación multiclase es necesario codificar las etiquetas mediante one-hot enconding")
+        #
+        #         if self.capas[-1].funcion_activacion is not core.funciones.funciones_activacion.softmax:
+        #             raise Exception(
+        #                 "Para clasificación multiclase es necesario definir la función softmax como la función de activación de la última capa")
+        #     except IndexError:
+        #         n_classes = np.unique(targets).size
+        #         if n_classes is not 2:
+        #             raise Exception(
+        #                 "Para clasificación multiclase es necesario codificar las etiquetas mediante one-hot enconding")
+        #         self.n_classes = 2
 
     def generate_random_batch(self, inputs, targets, batch_size):
         batch_idx = np.random.choice(self.n_train_samples, batch_size, replace=False)
@@ -92,7 +115,7 @@ class Modelo:
         return activations
 
     def train(self, inputs, targets, epochs=1, lr=0.001, batch_size=None, diagnose=False):
-        self.comprobar_entradas(inputs, targets)
+        targets = self.comprobar_entradas(inputs, targets)
         self.cost = np.empty((epochs,))
 
         if batch_size is None:
@@ -120,7 +143,9 @@ class Modelo:
                 self.deltas = []
                 last_activations[n_sample] = self.capas[-1].a
             self.cost[epo] = self.cost_function["funcion"](batch_targets, last_activations)
+            # print(self.cost[epo])
             self.weights.append(copy.deepcopy(self.W))
+            # print("Epoch {} / {}".format(epo + 1, epochs))
         if diagnose:
             if self.n_features is not 2 or self.n_classes is not 2:
                 print(
@@ -196,3 +221,9 @@ class Modelo:
 
     def optimize_parameters(self, lr):
         self.optimizer(self, lr)
+
+    def check_targets_shape(self, targets):
+        if len(targets.shape) is 1:
+            return np.expand_dims(targets, axis=1)
+        else:
+            return targets
