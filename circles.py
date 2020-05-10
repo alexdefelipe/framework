@@ -1,8 +1,7 @@
-import numpy as np
 from matplotlib import pyplot as plt
-from sklearn.datasets import make_blobs
+from matplotlib import pyplot as plt
+from sklearn.datasets import make_circles
 from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import OneHotEncoder
 
 from core import Modelo
 from core.capas import Entrada, Densa
@@ -15,7 +14,7 @@ def nuestro_modelo(X_train, X_test, y_train, y_test, topologia):
     for n in topologia:
         modelo.add(Densa(n))
 
-    modelo.add(Densa(3, funcion_activacion="softmax"))
+    modelo.add(Densa(1, funcion_activacion="sigmoide"))
 
     modelo.train(X_train, y_train, epochs=100, batch_size=100, lr=0.01, diagnose=False)
     y_pred, scores = modelo.predict(X_test, return_scores=True)
@@ -39,16 +38,7 @@ def nuestro_modelo(X_train, X_test, y_train, y_test, topologia):
 
 
 if __name__ == '__main__':
-    X, y = make_blobs(n_samples=300, centers=3, n_features=2, random_state=105)
-    # y = np.expand_dims(y, axis=1)
-    # X, y = make_circles(n_samples=1000, factor=0.1, noise=0.05, random_state=106)
-    # X, y = fetch_openml('mnist_784', version=1, return_X_y=True)
-    # X, y = load_digits(return_X_y=True)
-    # scaler = StandardScaler()
-    # X = scaler.fit_transform(X)
-    onehotencoder = OneHotEncoder(categories="auto")
-    y = onehotencoder.fit_transform(np.expand_dims(y, axis=1)).toarray()
+    X, y = make_circles(n_samples=200, random_state=105)
 
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=42)
-    # X_train, X_test, y_train, y_test = train_test_split(X, y, train_size=5000, test_size=10000, random_state=42)
-    nuestro_modelo(X_train, X_test, y_train, y_test, [3])
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.25, random_state=42)
+    nuestro_modelo(X_train, X_test, y_train, y_test, [7, 5, 3])

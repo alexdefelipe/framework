@@ -1,21 +1,19 @@
-import numpy as np
 from matplotlib import pyplot as plt
 from sklearn.datasets import make_blobs
 from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import OneHotEncoder
 
 from core import Modelo
 from core.capas import Entrada, Densa
 
 
-def nuestro_modelo(X_train, X_test, y_train, y_test, topologia):
+def nuestro_modelo(X_train, X_test, y_train, y_test, topologia, fn_out):
     modelo = Modelo()
 
     modelo.add(Entrada(X_train.shape[1]))
-    for n in topologia:
+    for n in topologia[:-1]:
         modelo.add(Densa(n))
 
-    modelo.add(Densa(3, funcion_activacion="softmax"))
+    modelo.add(Densa(topologia[-1], funcion_activacion=fn_out))
 
     modelo.train(X_train, y_train, epochs=100, batch_size=100, lr=0.01, diagnose=False)
     y_pred, scores = modelo.predict(X_test, return_scores=True)
@@ -39,9 +37,12 @@ def nuestro_modelo(X_train, X_test, y_train, y_test, topologia):
 
 
 if __name__ == '__main__':
-    X, y = make_blobs(n_samples=300, centers=3, n_features=2, random_state=105)
-    onehotencoder = OneHotEncoder(categories="auto")
-    y = onehotencoder.fit_transform(np.expand_dims(y, axis=1)).toarray()
+    X, y = make_blobs(n_samples=300, centers=2, n_features=2, random_state=105)
+    # onehotencoder = OneHotEncoder(categories="auto")
+    # y = onehotencoder.fit_transform(np.expand_dims(y, axis=1)).toarray()
 
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=42)
-    nuestro_modelo(X_train, X_test, y_train, y_test, [3])
+    try:
+        nuestro_modelo(X_train, X_test, y_train, y_test, [3, 2], "softmax")
+    except Exception as e:
+        print(e)

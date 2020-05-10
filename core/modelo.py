@@ -8,7 +8,7 @@ import numpy as np
 
 import core
 from core.capas import Entrada
-from core.funciones import funciones_coste
+from core.funciones import funciones_coste, funciones_activacion
 from core.optimizers import optimizers
 
 
@@ -26,6 +26,7 @@ class Modelo:
         self.n_train_samples = None
         self.n_features = None
         self.n_classes = None
+        self.multiclass = False
 
     def add(self, capa):
         n_capas = len(self.capas)
@@ -40,14 +41,16 @@ class Modelo:
             n = capa.n
             self.capas.append(capa)
             # Inicialización He
-            self.W.append(np.random.rand(n_anterior, n) * (np.sqrt(2 / n_anterior)))
+            self.W.append(np.random.rand(n_anterior, n)
+                          * (np.sqrt(2 / n_anterior)))
             self.b.append(np.random.rand(1, n) * np.sqrt(2 / n_anterior))
 
     def comprobar_entradas(self, inputs, targets):
         targets = self.check_targets_shape(targets)
         # Comprobar si son arrays de numpy
         if type(inputs) is not np.ndarray or type(targets) is not np.ndarray:
-            raise Exception("Tanto las entradas como las etiquetas deben de estar contenidas en un array de numpy")
+            raise Exception(
+                "Tanto las entradas como las etiquetas deben de estar contenidas en un array de numpy")
         self.n_features = inputs.shape[1]
 
         # Comprobar que inputs y targets consideran el mismo número de casos
@@ -58,47 +61,48 @@ class Modelo:
                 "La dimensión 0, correspondiente al número de muestras, de los inputs y de las etiquetas debe de coincidir")
         self.n_train_samples = i
 
-        # Primero compruebo el tamaño del shape. Si solo tiene un elemento, es una clasificación binaria
-        self.n_classes = 2 if targets.shape[1] is 1 else targets.shape[1]
+        # Primero se determina el número de clases
+        if targets.shape[1] >= 2:
+            # One-hot encoded
+            self.n_classes = targets.shape[1]
+            self.multiclass = True
+        elif targets.shape[1] == 1:
+            self.n_classes = 2
+            self.multiclass = False
+        else:
+            raise Exception("No se reconoce el formato del vector de etiquetas")
 
         if self.n_classes is 2:
-            if self.capas[-1].n is 1 and self.capas[
-                -1].funcion_activacion is core.funciones.funciones_activacion.softmax:
-                raise Exception("La capa de salida de una neurona no puede usar softmax como función de activación")
-            if self.capas[-1].n is 2 and self.capas[
-                -1].funcion_activacion is not core.funciones.funciones_activacion.softmax:
-                raise Exception("La capa de salida de dos neuronas debe usar softmax como función de activación")
-        else:
-            if np.unique(targets[:, 1]) > 2:
+            if self.capas[-1].n > 2:
+                raise Exception("En clasificación binaria la capa de salida debe de tener una o dos neuronas")
+
+            if self.multiclass and self.capas[-1].n is 1:
+                raise Exception("El número de neuronas de la última capa debe de coincidir con el número de clases")
+
+            if np.unique(targets).size > 2:
                 raise Exception(
                     "Para clasificación multiclase es necesario codificar las etiquetas mediante one-hot enconding")
+            if self.capas[-1].n is 1:
+                if self.capas[-1].funcion_activacion is funciones_activacion.softmax:
+                    raise Exception(
+                        "La capa de salida de una neurona no puede usar softmax como función de activación")
+            elif self.capas[-1].n is 2:
+                if self.capas[-1].funcion_activacion is not funciones_activacion.softmax:
+                    raise Exception(
+                        "La capa de salida de dos neuronas debe usar softmax como función de activación")
+        else:
+            if self.capas[-1].n is not self.n_classes:
+                raise Exception("El número de neuronas de la última capa debe de coincidir con el número de clases")
+
             if self.capas[-1].funcion_activacion is not core.funciones.funciones_activacion.softmax:
                 raise Exception(
                     "Para clasificación multiclase es necesario definir la función softmax como la función de activación de la última capa")
 
         return targets
-        # if len(targets.shape) is 1 and self.capas[-1].funcion_activacion is core.funciones.funciones_activacion.softmax:
-        #     raise Exception(
-        #         "Este framework no permite usar la función de activación softmax para clasificación binaria")
-        # else:
-        #     try:
-        #         self.n_classes = targets.shape[1]
-        #         if self.n_classes is 2:
-        #             raise Exception(
-        #                 "Para clasificación multiclase es necesario codificar las etiquetas mediante one-hot enconding")
-        #
-        #         if self.capas[-1].funcion_activacion is not core.funciones.funciones_activacion.softmax:
-        #             raise Exception(
-        #                 "Para clasificación multiclase es necesario definir la función softmax como la función de activación de la última capa")
-        #     except IndexError:
-        #         n_classes = np.unique(targets).size
-        #         if n_classes is not 2:
-        #             raise Exception(
-        #                 "Para clasificación multiclase es necesario codificar las etiquetas mediante one-hot enconding")
-        #         self.n_classes = 2
 
     def generate_random_batch(self, inputs, targets, batch_size):
-        batch_idx = np.random.choice(self.n_train_samples, batch_size, replace=False)
+        batch_idx = np.random.choice(
+            self.n_train_samples, batch_size, replace=False)
         batch_inputs = inputs[batch_idx, :]
         batch_targets = targets[batch_idx]
 
@@ -110,11 +114,12 @@ class Modelo:
             if i == 0:
                 activations = capa.__propagar__(activations)
             else:
-                activations = capa.__propagar__(activations, W[i - 1], b[i - 1])
+                activations = capa.__propagar__(
+                    activations, W[i - 1], b[i - 1])
 
         return activations
 
-    def train(self, inputs, targets, epochs=1, lr=0.001, batch_size=None, diagnose=False):
+    def train(self, inputs, targets, epochs=1, lr=0.001, batch_size=None, diagnose=False, callbacks=[]):
         targets = self.comprobar_entradas(inputs, targets)
         self.cost = np.empty((epochs,))
 
@@ -122,7 +127,8 @@ class Modelo:
             batch_size = self.n_train_samples
 
         for epo in range(epochs):
-            batch_inputs, batch_targets = self.generate_random_batch(inputs, targets, batch_size)
+            batch_inputs, batch_targets = self.generate_random_batch(
+                inputs, targets, batch_size)
             last_activations = np.empty(batch_targets.shape)
             for n_sample, (x, y) in enumerate(zip(batch_inputs, batch_targets)):
                 # Feedforward
@@ -134,7 +140,8 @@ class Modelo:
                 self.deltas.insert(0, delta)
                 for i in reversed(range(1, len(self.capas) - 1)):
                     capa = self.capas[i]
-                    delta = self.deltas[0] @ self.W[i].T * capa.funcion_activacion["derivada"](capa.z)
+                    delta = self.deltas[0] @ self.W[i].T * \
+                            capa.funcion_activacion["derivada"](capa.z)
                     self.deltas.insert(0, delta)
 
                 # Weight optimization
@@ -142,9 +149,13 @@ class Modelo:
 
                 self.deltas = []
                 last_activations[n_sample] = self.capas[-1].a
-            self.cost[epo] = self.cost_function["funcion"](batch_targets, last_activations)
+            self.cost[epo] = self.cost_function["funcion"](
+                batch_targets, last_activations)
             # print(self.cost[epo])
             self.weights.append(copy.deepcopy(self.W))
+            for callback in callbacks:
+                callback.set_modelo(self)
+                callback.on_epoch_end(epo)
             # print("Epoch {} / {}".format(epo + 1, epochs))
         if diagnose:
             if self.n_features is not 2 or self.n_classes is not 2:
@@ -157,13 +168,15 @@ class Modelo:
         if weights is None:
             weights = self.W
 
-        scores = [self.feed_forward(x, self.capas, weights, self.b).squeeze(axis=0) for x in inputs]
-        predictions = [int(np.round(score)) if self.n_classes is 2 else np.argmax(score) for score in scores]
+        scores = [self.feed_forward(
+            x, self.capas, weights, self.b).squeeze(axis=0) for x in inputs]
+        predictions = [int(np.round(score)) if self.n_classes is 2 and self.multiclass is False else np.argmax(
+            score) for score in scores]
 
         return (predictions, scores) if return_scores else predictions
 
     def plot_probability_map(self, x_lims, y_lims, res, data=None, weights=None, axis=None, plot=False):
-        if self.n_features is not 2 or self.n_classes is not 2:
+        if self.n_features is not 2 or self.n_classes is not 2 or self.multiclass:
             print(
                 "Aviso: no se ha podido realizar el plot del mapa de probabilidades. Solo puede hacerse en un espacio bidimensional.")
             return axis
@@ -173,7 +186,8 @@ class Modelo:
             y_values = np.linspace(y_lims[0], y_lims[1], res)
 
             inputs = np.array([(x, y) for x in x_values for y in y_values])
-            preds, scores = self.predict(inputs, weights=weights, return_scores=True)
+            preds, scores = self.predict(
+                inputs, weights=weights, return_scores=True)
             scores = np.reshape(scores, (res, res)).T
 
             axis.pcolormesh(x_values, y_values, scores, cmap="coolwarm")
@@ -190,7 +204,8 @@ class Modelo:
 
     def decision_boundary_tracking(self, inputs, targets):
         n_epochs = self.cost.size
-        fig, ax = plt.subplots(2, 1, figsize=(5, 6), gridspec_kw={'height_ratios': [1, 3]})
+        fig, ax = plt.subplots(2, 1, figsize=(5, 6), gridspec_kw={
+            'height_ratios': [1, 3]})
         tmpdir = tempfile.gettempdir()
         savepath = '/'.join([tmpdir, 'diagnostic_images'])
         filename = '/'.join([savepath, 'image.jpg'])
@@ -216,7 +231,8 @@ class Modelo:
 
         duration = [max(3 / n_epochs, 0.05) for i in range(n_epochs)]
         duration[-1] = 1
-        imageio.mimsave('/'.join([savepath, 'anim.gif']), self.bound_tracking, duration=duration)
+        imageio.mimsave('/'.join([savepath, 'anim.gif']),
+                        self.bound_tracking, duration=duration)
         print("Se ha guardado un GIF en " + savepath)
 
     def optimize_parameters(self, lr):

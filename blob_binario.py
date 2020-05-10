@@ -1,9 +1,9 @@
 from matplotlib import pyplot as plt
-from matplotlib import pyplot as plt
 from sklearn.datasets import make_blobs
 from sklearn.model_selection import train_test_split
 
 from core import Modelo
+from core.callbacks import MetricsCallback
 from core.capas import Entrada, Densa
 
 
@@ -14,14 +14,10 @@ def nuestro_modelo(X_train, X_test, y_train, y_test, topologia):
     for n in topologia:
         modelo.add(Densa(n))
 
-    modelo.add(Densa(1, funcion_activacion="softmax"))
+    modelo.add(Densa(1, funcion_activacion="sigmoide"))
 
-    modelo.train(X_train, y_train, epochs=100, batch_size=100, lr=0.01, diagnose=False)
+    modelo.train(X_train, y_train, epochs=100, batch_size=100, lr=0.01, diagnose=False, callbacks=set_callbacks())
     y_pred, scores = modelo.predict(X_test, return_scores=True)
-
-    # y_pred_bool = np.round(scores).astype(np.int)
-    print("Resultados de nuestro modelo:\n")
-    # print(classification_report(np.argmax(y_test, axis=0), y_pred))
 
     preds = modelo.predict(X_test)
 
@@ -35,6 +31,11 @@ def nuestro_modelo(X_train, X_test, y_train, y_test, topologia):
     ax2.scatter(X_test[:, 0], X_test[:, 1], c=preds)
     ax2.set_title("Predicciones")
     plt.show()
+
+
+def set_callbacks():
+    metrics_callback = MetricsCallback(on_epoch_functions=[lambda x: print(x)])
+    return [metrics_callback]
 
 
 if __name__ == '__main__':
