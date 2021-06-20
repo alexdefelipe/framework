@@ -7,9 +7,11 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 import core
+from core import utils
 from core.capas import Entrada
 from core.funciones import funciones_coste, funciones_activacion
 from core.optimizers import optimizers
+from core.utils import round_scores
 
 
 class Modelo:
@@ -27,6 +29,7 @@ class Modelo:
         self.n_features = None
         self.n_classes = None
         self.multiclass = False
+        self.computed_metrics = {}
 
     def add(self, capa):
         n_capas = len(self.capas)
@@ -155,6 +158,7 @@ class Modelo:
             self.weights.append(copy.deepcopy(self.W))
             for callback in callbacks:
                 callback.set_modelo(self)
+                callback.init(targets=batch_targets, scores=round_scores(self, last_activations))
                 callback.on_epoch_end(epo)
             # print("Epoch {} / {}".format(epo + 1, epochs))
         if diagnose:
@@ -168,10 +172,8 @@ class Modelo:
         if weights is None:
             weights = self.W
 
-        scores = [self.feed_forward(
-            x, self.capas, weights, self.b).squeeze(axis=0) for x in inputs]
-        predictions = [int(np.round(score)) if self.n_classes is 2 and self.multiclass is False else np.argmax(
-            score) for score in scores]
+        scores = [self.feed_forward(x, self.capas, weights, self.b).squeeze(axis=0) for x in inputs]
+        predictions = utils.round_scores(self, scores)
 
         return (predictions, scores) if return_scores else predictions
 
